@@ -108,14 +108,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper: Find target asset in Syntrophe release collection
     const findAssetInSyntrophe = (app, releases) => {
         const isExp = app.id.includes('experimental') || app.keywords.some(k => k.toLowerCase().includes('experimental'));
+        
+        // 1. Always prioritize the Unified Rolling Release ('latest' tag)
+        const latestRelease = releases.find(r => r.tag_name === 'latest');
+        if (latestRelease) {
+            const target = (latestRelease.assets || []).find(asset => {
+                const name = asset.name.toLowerCase();
+                const cleanKeywords = app.keywords.filter(k => !(app.channels || []).includes(k.toLowerCase()));
+                const matches = cleanKeywords.every(k => name.includes(k.toLowerCase()));
+                if (matches && !isExp && name.includes('experimental')) return false;
+                return matches;
+            });
+            if (target) {
+                return { asset: target, release: latestRelease };
+            }
+        }
+
+        // 2. Fallback to older / channel-specific releases if not in 'latest'
         for (const release of releases) {
-            if (release.tag_name !== 'latest') {
-                if (app.channels && app.channels.length > 0) {
-                    const matchesChannel = app.channels.some(ch => release.tag_name && release.tag_name.endsWith(`-${ch}`));
-                    if (!matchesChannel) continue;
-                } else if (release.prerelease && !isExp) {
-                    continue;
-                }
+            if (release.tag_name === 'latest') continue;
+            if (app.channels && app.channels.length > 0) {
+                const matchesChannel = app.channels.some(ch => release.tag_name && release.tag_name.endsWith(`-${ch}`));
+                if (!matchesChannel) continue;
+            } else if (release.prerelease && !isExp) {
+                continue;
             }
             const assets = release.assets || [];
             const target = assets.find(asset => {
