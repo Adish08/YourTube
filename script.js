@@ -1,533 +1,236 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const observerOptions = {
-        root: null,
-        rootMargin: '100px',
-        threshold: 0.01
-    };
-
-    const observer = new IntersectionObserver((entries, observer) => {
+    // 1. Scroll-triggered fade-in animations
+    const observer = new IntersectionObserver((entries, obs) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('visible');
-                observer.unobserve(entry.target);
+                obs.unobserve(entry.target);
             }
         });
-    }, observerOptions);
+    }, { root: null, rootMargin: '100px', threshold: 0.01 });
 
-    const sections = document.querySelectorAll('.app-section');
-    sections.forEach(section => {
-        observer.observe(section);
-    });
+    document.querySelectorAll('.app-section').forEach(section => observer.observe(section));
 
+    // 2. Glass header scroll effect
     const header = document.querySelector('.glass-header');
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
-    });
+    if (header) {
+        window.addEventListener('scroll', () => {
+            header.classList.toggle('scrolled', window.scrollY > 50);
+        }, { passive: true });
+    }
 
-    const cards = document.querySelectorAll('.glass-card');
-
-    cards.forEach(card => {
+    // 3. Smooth card 3D tilt effect
+    document.querySelectorAll('.glass-card').forEach(card => {
+        let isHovered = false;
+        card.addEventListener('mouseenter', () => { isHovered = true; });
         card.addEventListener('mousemove', (e) => {
+            if (!isHovered) return;
             const rect = card.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-
-            const rotateX = ((y - centerY) / centerY) * -5;
-            const rotateY = ((x - centerX) / centerX) * 5;
-
-            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+            const rotateX = ((y - rect.height / 2) / (rect.height / 2)) * -5;
+            const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 5;
+            card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale(1.02)`;
         });
-
         card.addEventListener('mouseleave', () => {
+            isHovered = false;
             card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
         });
     });
 
-    const repoPromises = {};
+    // 4. Declarative Apps Catalog
+    const APPS = [
+        { id: 'btn-microg', repo: 'MorpheApp/MicroG-RE', keywords: ['.apk'], fallback: 'https://github.com/MorpheApp/MicroG-RE/releases/latest' },
+        { id: 'btn-yt-morphe', channels: ['morphe'], keywords: ['youtube', 'morphe', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-yt-experimental', channels: ['morphe-dev'], keywords: ['youtube', 'experimental', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-ytm-arm64', channels: ['morphe'], keywords: ['music', 'morphe', 'arm64', '.apk'], prefix: 'Arm64', fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-ytm-armv7', channels: ['morphe'], keywords: ['music', 'morphe', 'v7a', '.apk'], prefix: 'Armv7', fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-ytm-experimental', channels: ['morphe-dev'], keywords: ['music', 'experimental', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-instagram', channels: ['piko'], keywords: ['instagram', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-facebook', channels: ['de-vanced'], keywords: ['facebook', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-reddit', channels: ['morphe'], keywords: ['reddit', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-twitter', channels: ['piko'], keywords: ['twitter', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-telegram', channels: ['rushi', 'paresh'], keywords: ['telegram', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-gphotos', channels: ['rushi', 'de-vanced'], keywords: ['google-photos', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-inshorts', channels: ['de-vanced'], keywords: ['inshorts', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-truecaller', channels: ['paresh'], keywords: ['truecaller', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-vn', channels: ['paresh'], keywords: ['vn', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-windscribe', channels: ['rushi'], keywords: ['windscribe', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-terabox', channels: ['rushi'], keywords: ['terabox', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-speedtest', channels: ['rushi'], keywords: ['speedtest', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-accuweather', channels: ['rushi'], keywords: ['accuweather', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-warp', channels: ['rushi'], keywords: ['1.1.1.1', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-ticktick', channels: ['paresh'], keywords: ['ticktick', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-macrodroid', channels: ['paresh'], keywords: ['macrodroid', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-xodo', channels: ['hoo-dles'], keywords: ['xodo', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-wpsoffice', channels: ['hoo-dles'], keywords: ['wps', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-windy', channels: ['hoo-dles'], keywords: ['windy', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-smartlauncher', channels: ['hoo-dles'], keywords: ['smart', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-sleep', channels: ['hoo-dles'], keywords: ['sleep', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-novalauncher', channels: ['hoo-dles'], keywords: ['nova', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-niagara', channels: ['hoo-dles'], keywords: ['niagara', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-ibispaint', channels: ['hoo-dles'], keywords: ['ibis', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-duolingo', channels: ['rushi', 'hoo-dles'], keywords: ['duolingo', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-busuu', channels: ['hoo-dles'], keywords: ['busuu', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' }
+    ];
 
-    const syntropheChannels = {
-        'btn-yt-morphe': 'morphe',
-        'btn-yt-experimental': 'morphe-dev',
-        'btn-ytm-arm64': 'morphe',
-        'btn-ytm-armv7': 'morphe',
-        'btn-ytm-experimental': 'morphe-dev',
-        'btn-instagram': 'piko',
-        'btn-facebook': 'de-vanced',
-        'btn-reddit': 'morphe',
-        'btn-twitter': 'piko',
-        'btn-telegram': ['rushi', 'paresh'],
-        'btn-gphotos': ['rushi', 'de-vanced'],
-        'btn-inshorts': 'de-vanced',
-        'btn-truecaller': 'paresh',
-        'btn-vn': 'paresh',
-        'btn-windscribe': 'rushi',
-        'btn-terabox': 'rushi',
-        'btn-speedtest': 'rushi',
-        'btn-accuweather': 'rushi',
-        'btn-warp': 'rushi',
-        'btn-ticktick': 'paresh',
-        'btn-macrodroid': 'paresh',
-        'btn-xodo': 'hoo-dles',
-        'btn-wpsoffice': 'hoo-dles',
-        'btn-windy': 'hoo-dles',
-        'btn-smartlauncher': 'hoo-dles',
-        'btn-sleep': 'hoo-dles',
-        'btn-novalauncher': 'hoo-dles',
-        'btn-niagara': 'hoo-dles',
-        'btn-ibispaint': 'hoo-dles',
-        'btn-duolingo': ['rushi', 'hoo-dles'],
-        'btn-busuu': 'hoo-dles'
+    // Helper: Session cache fetcher
+    const fetchCached = async (url, key, ttl = 600000) => {
+        try {
+            const cached = sessionStorage.getItem(key);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed?.timestamp && Date.now() - parsed.timestamp < ttl) {
+                    return parsed.data;
+                }
+            }
+        } catch (e) {}
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
+        const data = await response.json();
+        try {
+            sessionStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data }));
+        } catch (e) {}
+        return data;
     };
 
-    const fetchLatestRelease = async (repo, keyword, buttonId, fallbackUrl, btnPrefix = 'Download') => {
-        const btn = document.getElementById(buttonId);
-        if (!btn) return;
+    // Helper: Extract version string
+    const extractVersion = (assetName, releaseTag) => {
+        const vMatch = assetName.match(/[-_]v(\d+(?:\.\d+)*)/i) || assetName.match(/v(\d+(?:\.\d+)+)/i);
+        if (vMatch) {
+            const val = vMatch[0].replace(/^[-_]/, '');
+            return val.startsWith('v') || val.startsWith('V') ? val : `v${val}`;
+        }
+        return releaseTag || '';
+    };
 
-        try {
-            let targetAsset = null;
-            let matchingRelease = null;
-
-            // 1. Try to fetch from Syntrophe first if a channel is mapped
-            const channelVal = syntropheChannels[buttonId];
-            if (channelVal) {
-                try {
-                    const allowedChannels = Array.isArray(channelVal) ? channelVal : [channelVal];
-                    const isExp = buttonId.includes('experimental') || keyword.some(k => k.toLowerCase().includes('experimental'));
-                    let syntropheReleases = null;
-                    const syntropheCachedKey = 'releases_cache_Adish08_Syntrophe';
-                    const cachedItem = sessionStorage.getItem(syntropheCachedKey);
-
-                    if (cachedItem) {
-                        try {
-                            const parsed = JSON.parse(cachedItem);
-                            if (parsed && parsed.timestamp && Date.now() - parsed.timestamp < 600000) {
-                                syntropheReleases = parsed.data;
-                            }
-                        } catch (e) {}
-                    }
-
-                    if (!syntropheReleases) {
-                        if (!repoPromises['Adish08/Syntrophe']) {
-                            repoPromises['Adish08/Syntrophe'] = (async () => {
-                                const response = await fetch('https://api.github.com/repos/Adish08/Syntrophe/releases');
-                                if (!response.ok) throw new Error('Syntrophe response was not ok');
-                                const data = await response.json();
-                                try {
-                                    sessionStorage.setItem(syntropheCachedKey, JSON.stringify({
-                                        timestamp: Date.now(),
-                                        data: data
-                                    }));
-                                } catch (e) {}
-                                return data;
-                            })();
-                        }
-                        syntropheReleases = await repoPromises['Adish08/Syntrophe'];
-                    }
-
-                    // Search across Syntrophe releases (newest to oldest, or unified 'latest' release)
-                    for (const release of syntropheReleases) {
-                        if (release.tag_name !== 'latest') {
-                            if (allowedChannels.length > 0) {
-                                const matchesChannel = allowedChannels.some(ch => release.tag_name && release.tag_name.endsWith(`-${ch}`));
-                                if (!matchesChannel) continue;
-                            } else if (release.prerelease && !isExp) {
-                                continue;
-                            }
-                        }
-
-                        const assets = release.assets || [];
-                        targetAsset = assets.find(asset => {
-                            const name = asset.name.toLowerCase();
-                            const cleanKeywords = keyword.filter(k => !allowedChannels.includes(k.toLowerCase()));
-                            const matchesKeywords = cleanKeywords.every(k => name.includes(k.toLowerCase()));
-                            if (matchesKeywords && !isExp && name.includes('experimental')) {
-                                return false;
-                            }
-                            return matchesKeywords;
-                        });
-
-                        if (targetAsset) {
-                            matchingRelease = release;
-                            break;
-                        }
-                    }
-                } catch (e) {
-                    console.warn(`Failed to fetch from Syntrophe for ${buttonId}, falling back to original repo:`, e);
+    // Helper: Find target asset in Syntrophe release collection
+    const findAssetInSyntrophe = (app, releases) => {
+        const isExp = app.id.includes('experimental') || app.keywords.some(k => k.toLowerCase().includes('experimental'));
+        for (const release of releases) {
+            if (release.tag_name !== 'latest') {
+                if (app.channels && app.channels.length > 0) {
+                    const matchesChannel = app.channels.some(ch => release.tag_name && release.tag_name.endsWith(`-${ch}`));
+                    if (!matchesChannel) continue;
+                } else if (release.prerelease && !isExp) {
+                    continue;
                 }
             }
-
-            // 2. Fallback to original repo if not found in Syntrophe
-            let releases = null;
-            if (!targetAsset || !matchingRelease) {
-                const cachedKey = `releases_cache_${repo}`;
-                const cachedItem = sessionStorage.getItem(cachedKey);
-
-                if (cachedItem) {
-                    try {
-                        const parsed = JSON.parse(cachedItem);
-                        if (parsed && parsed.timestamp && Date.now() - parsed.timestamp < 600000) {
-                            releases = parsed.data;
-                        }
-                    } catch (e) {}
-                }
-
-                if (!releases) {
-                    if (!repoPromises[repo]) {
-                        repoPromises[repo] = (async () => {
-                            const response = await fetch(`https://api.github.com/repos/${repo}/releases`);
-                            if (!response.ok) throw new Error('Network response was not ok');
-                            const data = await response.json();
-                            try {
-                                sessionStorage.setItem(cachedKey, JSON.stringify({
-                                    timestamp: Date.now(),
-                                    data: data
-                                }));
-                            } catch (e) {}
-                            return data;
-                        })();
-                    }
-                    releases = await repoPromises[repo];
-                }
-
-                for (const release of releases) {
-                    const assets = release.assets || [];
-                    targetAsset = assets.find(asset => {
-                        const name = asset.name.toLowerCase();
-                        const matchesKeywords = keyword.every(k => name.includes(k.toLowerCase()));
-                        const isExperimentalRequested = keyword.some(k => k.toLowerCase().includes('experimental'));
-                        if (matchesKeywords && !isExperimentalRequested && name.includes('experimental')) {
-                            return false;
-                        }
-                        return matchesKeywords;
-                    });
-                    if (targetAsset) {
-                        matchingRelease = release;
-                        break;
-                    }
-                }
+            const assets = release.assets || [];
+            const target = assets.find(asset => {
+                const name = asset.name.toLowerCase();
+                const cleanKeywords = app.keywords.filter(k => !(app.channels || []).includes(k.toLowerCase()));
+                const matches = cleanKeywords.every(k => name.includes(k.toLowerCase()));
+                if (matches && !isExp && name.includes('experimental')) return false;
+                return matches;
+            });
+            if (target) {
+                return { asset: target, release };
             }
+        }
+        return null;
+    };
 
-            // 3. Update the UI with targetAsset and matchingRelease
-            if (targetAsset && matchingRelease) {
-                btn.href = targetAsset.browser_download_url;
-                btn.removeAttribute('target');
+    // Helper: Apply button styling and metadata to card
+    const updateButtonUI = (btn, downloadUrl, labelText, updatedAt) => {
+        btn.href = downloadUrl;
+        btn.removeAttribute('target');
+        const span = btn.querySelector('span');
+        if (span) span.textContent = labelText;
 
-                let appVersion = '';
-                const versionMatch = targetAsset.name.match(/v(\d+(\.\d+)+)/);
-                if (versionMatch) {
-                    appVersion = versionMatch[0];
-                } else if (matchingRelease.body) {
-                    const bodyLines = matchingRelease.body.split(/\r?\n/);
-                    const isYoutube = keyword.some(k => k.toLowerCase().includes('youtube'));
-                    const isMusic = keyword.some(k => k.toLowerCase().includes('music'));
-                    
-                    let targetLine = null;
-                    if (isYoutube) {
-                        targetLine = bodyLines.find(line => {
-                            const l = line.toLowerCase();
-                            return l.includes('youtube') && !l.includes('music');
-                        });
-                    } else if (isMusic) {
-                        targetLine = bodyLines.find(line => {
-                            const l = line.toLowerCase();
-                            return l.includes('music') || l.includes('yt-music');
-                        });
-                    }
-                    
-                    if (targetLine) {
-                        const verMatch = targetLine.match(/v?(\d+(\.\d+)+)/);
-                        if (verMatch) {
-                            appVersion = verMatch[0].startsWith('v') ? verMatch[0] : 'v' + verMatch[0];
+        if (updatedAt) {
+            try {
+                const formattedDate = new Date(updatedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                const cardContent = btn.closest('.card-content');
+                if (cardContent) {
+                    let updateEl = cardContent.querySelector('.card-update');
+                    if (!updateEl) {
+                        updateEl = document.createElement('div');
+                        updateEl.className = 'card-update';
+                        const cardDesc = cardContent.querySelector('.card-desc');
+                        if (cardDesc) {
+                            cardDesc.parentNode.insertBefore(updateEl, cardDesc.nextSibling);
+                        } else {
+                            btn.parentNode.insertBefore(updateEl, btn);
                         }
                     }
+                    updateEl.textContent = `Updated: ${formattedDate}`;
                 }
-
-                if (appVersion) {
-                    btn.querySelector('span').textContent = `${btnPrefix} ${appVersion}`;
-                } else {
-                    btn.querySelector('span').textContent = `${btnPrefix} ${matchingRelease.tag_name}`;
-                }
-
-                if (targetAsset.updated_at) {
-                    try {
-                        const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-                        const formattedDate = new Date(targetAsset.updated_at).toLocaleDateString('en-US', dateOptions);
-                        
-                        const cardContent = btn.closest('.card-content');
-                        if (cardContent) {
-                            let updateEl = cardContent.querySelector('.card-update');
-                            if (!updateEl) {
-                                updateEl = document.createElement('div');
-                                updateEl.className = 'card-update';
-                                const cardDesc = cardContent.querySelector('.card-desc');
-                                if (cardDesc) {
-                                    cardDesc.parentNode.insertBefore(updateEl, cardDesc.nextSibling);
-                                } else {
-                                    btn.parentNode.insertBefore(updateEl, btn);
-                                }
-                            }
-                            updateEl.textContent = `Updated: ${formattedDate}`;
-                        }
-                    } catch (e) {
-                        console.error('Error formatting release date:', e);
-                    }
-                }
-            } else {
-                if (releases && releases.length > 0) {
-                    btn.href = releases[0].html_url;
-                    btn.querySelector('span').textContent = 'View Releases';
-                } else if (fallbackUrl) {
-                    btn.href = fallbackUrl;
-                    btn.querySelector('span').textContent = 'Download (Fallback)';
-                } else {
-                    throw new Error('No releases found');
-                }
-            }
-
-        } catch (error) {
-            if (fallbackUrl) {
-                btn.href = fallbackUrl;
-                btn.querySelector('span').textContent = 'Download (Fallback)';
-            } else {
-                btn.querySelector('span').textContent = 'View Releases';
+            } catch (e) {
+                console.error('Error formatting date:', e);
             }
         }
     };
 
-    fetchLatestRelease(
-        'MorpheApp/MicroG-RE',
-        ['.apk'],
-        'btn-microg',
-        'https://github.com/MorpheApp/MicroG-RE/releases/latest'
-    );
+    // 5. Main release loader
+    const loadAllReleases = async () => {
+        let syntropheReleases = [];
+        try {
+            syntropheReleases = await fetchCached(
+                'https://api.github.com/repos/Adish08/Syntrophe/releases',
+                'releases_cache_Adish08_Syntrophe'
+            );
+        } catch (err) {
+            console.warn('Could not fetch Syntrophe releases:', err);
+        }
 
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['youtube', 'morphe', '.apk'],
-        'btn-yt-morphe',
-        'https://github.com/ngbangg/builder-for-morphe/releases'
-    );
+        for (const app of APPS) {
+            const btn = document.getElementById(app.id);
+            if (!btn) continue;
 
-    fetchLatestRelease(
-        'Ravi-Kishor/Revanced-Extended',
-        ['youtube', '.apk'],
-        'btn-yt-experimental',
-        'https://github.com/Ravi-Kishor/Revanced-Extended/releases'
-    );
+            const prefix = app.prefix || 'Download';
 
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['music', 'morphe', 'arm64', '.apk'],
-        'btn-ytm-arm64',
-        'https://github.com/ngbangg/builder-for-morphe/releases',
-        'Arm64'
-    );
+            try {
+                // Non-Syntrophe app (e.g. MicroG)
+                if (app.repo) {
+                    const repoReleases = await fetchCached(
+                        `https://api.github.com/repos/${app.repo}/releases`,
+                        `releases_cache_${app.repo}`
+                    );
+                    const latest = repoReleases?.[0];
+                    const asset = latest?.assets?.find(a => app.keywords.every(k => a.name.toLowerCase().includes(k.toLowerCase())));
+                    if (asset && latest) {
+                        const ver = extractVersion(asset.name, latest.tag_name);
+                        updateButtonUI(btn, asset.browser_download_url, `${prefix} ${ver}`.trim(), asset.updated_at);
+                        continue;
+                    }
+                }
 
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['music', 'morphe', 'v7a', '.apk'],
-        'btn-ytm-armv7',
-        'https://github.com/ngbangg/builder-for-morphe/releases',
-        'Armv7'
-    );
+                // Syntrophe app matching
+                if (syntropheReleases && syntropheReleases.length > 0) {
+                    const match = findAssetInSyntrophe(app, syntropheReleases);
+                    if (match) {
+                        const ver = extractVersion(match.asset.name, match.release.tag_name);
+                        updateButtonUI(btn, match.asset.browser_download_url, `${prefix} ${ver}`.trim(), match.asset.updated_at);
+                        continue;
+                    }
+                }
 
-    fetchLatestRelease(
-        'Ravi-Kishor/Revanced-Extended',
-        ['music', '.apk'],
-        'btn-ytm-experimental',
-        'https://github.com/Ravi-Kishor/Revanced-Extended/releases'
-    );
+                // Fallback if not resolved
+                if (app.fallback) {
+                    btn.href = app.fallback;
+                    const span = btn.querySelector('span');
+                    if (span) span.textContent = 'View Releases';
+                }
+            } catch (err) {
+                console.warn(`Error resolving app ${app.id}:`, err);
+                if (app.fallback) {
+                    btn.href = app.fallback;
+                    const span = btn.querySelector('span');
+                    if (span) span.textContent = 'View Releases';
+                }
+            }
+        }
+    };
 
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['instagram', 'piko', '.apk'],
-        'btn-instagram',
-        'https://github.com/ngbangg/builder-for-morphe/releases'
-    );
+    loadAllReleases();
 
-
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['facebook', 'de-vanced', '.apk'],
-        'btn-facebook',
-        'https://github.com/ngbangg/builder-for-morphe/releases'
-    );
-
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['reddit', 'morphe', '.apk'],
-        'btn-reddit',
-        'https://github.com/ngbangg/builder-for-morphe/releases'
-    );
-
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['twitter', 'piko', '.apk'],
-        'btn-twitter',
-        'https://github.com/ngbangg/builder-for-morphe/releases'
-    );
-
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['telegram', 'paresh', '.apk'],
-        'btn-telegram',
-        'https://github.com/ngbangg/builder-for-morphe/releases'
-    );
-
-    fetchLatestRelease(
-        'RookieEnough/Morphe-AutoBuilds',
-        ['google-photos', '.apk'],
-        'btn-gphotos',
-        'https://github.com/RookieEnough/Morphe-AutoBuilds/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['inshorts', 'de-vanced', '.apk'],
-        'btn-inshorts',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['truecaller', 'paresh', '.apk'],
-        'btn-truecaller',
-        'https://github.com/ngbangg/builder-for-morphe/releases'
-    );
-
-    fetchLatestRelease(
-        'ngbangg/builder-for-morphe',
-        ['vn', 'paresh', '.apk'],
-        'btn-vn',
-        'https://github.com/ngbangg/builder-for-morphe/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['windscribe-vpn', 'rushi', '.apk'],
-        'btn-windscribe',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['terabox', 'rushi', '.apk'],
-        'btn-terabox',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['speedtest-by-ookla', 'rushi', '.apk'],
-        'btn-speedtest',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['accuweather', 'rushi', '.apk'],
-        'btn-accuweather',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['1.1.1.1', 'rushi', '.apk'],
-        'btn-warp',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['ticktick', 'paresh', '.apk'],
-        'btn-ticktick',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['macrodroid', 'paresh', '.apk'],
-        'btn-macrodroid',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['xodo', 'hoo-dles', '.apk'],
-        'btn-xodo',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['wps-office', 'hoo-dles', '.apk'],
-        'btn-wpsoffice',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['windy', 'hoo-dles', '.apk'],
-        'btn-windy',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['smart-launcher-6', 'hoo-dles', '.apk'],
-        'btn-smartlauncher',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['sleep-as-android', 'hoo-dles', '.apk'],
-        'btn-sleep',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['nova-launcher', 'hoo-dles', '.apk'],
-        'btn-novalauncher',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['niagara-launcher', 'hoo-dles', '.apk'],
-        'btn-niagara',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['ibis-paint-x', 'hoo-dles', '.apk'],
-        'btn-ibispaint',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['duolingo', 'hoo-dles', '.apk'],
-        'btn-duolingo',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['busuu', 'hoo-dles', '.apk'],
-        'btn-busuu',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
-
+    // 6. Disclaimer Popup Handler
     const popup = document.getElementById('disclaimerPopup');
     const closeBtn = document.getElementById('closePopupBtn');
     const STORAGE_KEY = 'apostrophe_disclaimer_accepted_v1';
@@ -547,39 +250,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Escape in-app browsers/WebViews on Android to force default browser downloads
+    // 7. Android Intent Handler (Forces external browser for APK download in WebViews)
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.btn');
-        if (btn && btn.href && btn.href.startsWith('http')) {
-            const ua = navigator.userAgent || navigator.vendor || window.opera;
-            const isAndroid = /android/i.test(ua);
-            
+        if (btn && btn.href && btn.href.startsWith('http') && btn.href.endsWith('.apk')) {
+            const isAndroid = /android/i.test(navigator.userAgent || navigator.vendor || window.opera);
             if (isAndroid) {
                 try {
                     const url = new URL(btn.href);
-                    // Remove protocol
                     const urlWithoutProtocol = url.hostname + url.pathname + url.search + url.hash;
-                    const intentUrl = `intent://${urlWithoutProtocol}#Intent;scheme=https;end`;
-                    
                     e.preventDefault();
-                    window.location.href = intentUrl;
+                    window.location.href = `intent://${urlWithoutProtocol}#Intent;scheme=https;end`;
                 } catch (err) {
-                    console.error('Error generating intent URL:', err);
+                    console.error('Error creating Android intent URL:', err);
                 }
             }
         }
     });
 });
 
+// 8. Background Analytics (24h rate-limited visit counter)
 (async () => {
     try {
         const lastVisit = localStorage.getItem('apostrophe_last_visit');
         const now = Date.now();
-        // 24 hours rate-limiting for the tracking endpoint
         if (!lastVisit || now - parseInt(lastVisit, 10) > 86400000) {
             await fetch('/api/visit');
             localStorage.setItem('apostrophe_last_visit', now.toString());
         }
-    } catch (e) {
-    }
+    } catch (e) {}
 })();
