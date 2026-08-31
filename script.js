@@ -71,8 +71,14 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'btn-niagara', channels: ['hoo-dles'], keywords: ['niagara', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
         { id: 'btn-ibispaint', channels: ['hoo-dles'], keywords: ['ibis', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
         { id: 'btn-duolingo', channels: ['rushi', 'hoo-dles'], keywords: ['duolingo', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
-        { id: 'btn-busuu', channels: ['hoo-dles'], keywords: ['busuu', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' }
+        { id: 'btn-busuu', channels: ['hoo-dles'], keywords: ['busuu', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-acrobat', channels: ['rushi', 'hooman'], keywords: ['acrobat', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-camscanner', channels: ['hoo-dles'], keywords: ['camscanner', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-inshot', channels: ['hooman'], keywords: ['inshot', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-protonvpn', channels: ['rushi', 'paresh'], keywords: ['proton', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
+        { id: 'btn-solidexplorer', channels: ['hoo-dles'], keywords: ['solid', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' }
     ];
+
 
     // Helper: Session cache fetcher
     const fetchCached = async (url, key, ttl = 600000) => {
