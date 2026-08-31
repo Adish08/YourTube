@@ -57,12 +57,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'btn-yt-experimental': 'morphe-dev',
         'btn-ytm-arm64': 'morphe',
         'btn-ytm-armv7': 'morphe',
+        'btn-ytm-experimental': 'morphe-dev',
         'btn-instagram': 'piko',
-        'btn-threads': 'de-vanced',
         'btn-facebook': 'de-vanced',
         'btn-reddit': 'morphe',
         'btn-twitter': 'piko',
-        'btn-telegram': 'paresh',
+        'btn-telegram': ['rushi', 'paresh'],
+        'btn-gphotos': ['rushi', 'de-vanced'],
+        'btn-inshorts': 'de-vanced',
         'btn-truecaller': 'paresh',
         'btn-vn': 'paresh',
         'btn-windscribe': 'rushi',
@@ -80,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'btn-novalauncher': 'hoo-dles',
         'btn-niagara': 'hoo-dles',
         'btn-ibispaint': 'hoo-dles',
-        'btn-duolingo': 'hoo-dles',
+        'btn-duolingo': ['rushi', 'hoo-dles'],
         'btn-busuu': 'hoo-dles'
     };
 
@@ -93,9 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let matchingRelease = null;
 
             // 1. Try to fetch from Syntrophe first if a channel is mapped
-            const channel = syntropheChannels[buttonId];
-            if (channel) {
+            const channelVal = syntropheChannels[buttonId];
+            if (channelVal) {
                 try {
+                    const allowedChannels = Array.isArray(channelVal) ? channelVal : [channelVal];
+                    const isExp = buttonId.includes('experimental') || keyword.some(k => k.toLowerCase().includes('experimental'));
                     let syntropheReleases = null;
                     const syntropheCachedKey = 'releases_cache_Adish08_Syntrophe';
                     const cachedItem = sessionStorage.getItem(syntropheCachedKey);
@@ -127,17 +131,31 @@ document.addEventListener('DOMContentLoaded', () => {
                         syntropheReleases = await repoPromises['Adish08/Syntrophe'];
                     }
 
-                    const channelRelease = syntropheReleases.find(r => r.tag_name && r.tag_name.endsWith(`-${channel}`));
-                    if (channelRelease) {
-                        const assets = channelRelease.assets || [];
+                    // Search across Syntrophe releases (newest to oldest, or unified 'latest' release)
+                    for (const release of syntropheReleases) {
+                        if (release.tag_name !== 'latest') {
+                            if (allowedChannels.length > 0) {
+                                const matchesChannel = allowedChannels.some(ch => release.tag_name && release.tag_name.endsWith(`-${ch}`));
+                                if (!matchesChannel) continue;
+                            } else if (release.prerelease && !isExp) {
+                                continue;
+                            }
+                        }
+
+                        const assets = release.assets || [];
                         targetAsset = assets.find(asset => {
                             const name = asset.name.toLowerCase();
-                            // Filter out the channel name from keyword checking since the release tag already guarantees the channel
-                            const cleanKeywords = keyword.filter(k => k.toLowerCase() !== channel.toLowerCase());
-                            return cleanKeywords.every(k => name.includes(k.toLowerCase()));
+                            const cleanKeywords = keyword.filter(k => !allowedChannels.includes(k.toLowerCase()));
+                            const matchesKeywords = cleanKeywords.every(k => name.includes(k.toLowerCase()));
+                            if (matchesKeywords && !isExp && name.includes('experimental')) {
+                                return false;
+                            }
+                            return matchesKeywords;
                         });
+
                         if (targetAsset) {
-                            matchingRelease = channelRelease;
+                            matchingRelease = release;
+                            break;
                         }
                     }
                 } catch (e) {
@@ -334,12 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'https://github.com/ngbangg/builder-for-morphe/releases'
     );
 
-    fetchLatestRelease(
-        'builder-for-morphe/builder-for-morphe.github.io',
-        ['threads', 'de-vanced', '.apk'],
-        'btn-threads',
-        'https://github.com/builder-for-morphe/builder-for-morphe.github.io/releases'
-    );
 
     fetchLatestRelease(
         'ngbangg/builder-for-morphe',
