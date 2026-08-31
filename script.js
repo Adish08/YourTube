@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'btn-sleep', channels: ['hoo-dles'], keywords: ['sleep', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
         { id: 'btn-novalauncher', channels: ['hoo-dles'], keywords: ['nova', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
         { id: 'btn-niagara', channels: ['hoo-dles'], keywords: ['niagara', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
-        { id: 'btn-ibispaint', channels: ['hoo-dles'], keywords: ['ibis', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
         { id: 'btn-duolingo', channels: ['rushi', 'hoo-dles'], keywords: ['duolingo', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
         { id: 'btn-busuu', channels: ['hoo-dles'], keywords: ['busuu', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
         { id: 'btn-acrobat', channels: ['rushi', 'hooman'], keywords: ['acrobat', '.apk'], fallback: 'https://github.com/Adish08/Syntrophe/releases' },
